@@ -1,0 +1,8 @@
+.idea
+input
+*.pyc
+.ipynb_checkpoints
+*.csv
+model_vars
+play_ground.py
+*.pkl
