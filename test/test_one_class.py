@@ -29,7 +29,7 @@ param_dict = {'PLAIN': {"func": replace_plain},
 def replace_one_class(target_class):
     train_df = pd.read_csv('../input/en_train.csv')
     labels = train_df["class"].unique()
-    print("labels: ", labels)
+    # print("labels: ", labels)
     date_df = train_df.loc[train_df["class"] == target_class]
     print("start replacing {} !".format(target_class))
     my_replaces = []
@@ -44,10 +44,29 @@ def replace_one_class(target_class):
     diff_df.to_csv("{}.csv".format(target_class), index=False)
 
 
+def replace_all_class():
+    replace_one_class("PLAIN")
+    replace_one_class("PUNCT")
+    replace_one_class("DATE")
+    replace_one_class("VERBATIM")
+    replace_one_class("CARDINAL")
+    replace_one_class("LETTERS")
+    replace_one_class("DECIMAL")
+    replace_one_class("MEASURE")
+    replace_one_class("MONEY")
+    replace_one_class("ORDINAL")
+    replace_one_class("TIME")
+    replace_one_class("ELECTRONIC")
+    replace_one_class("DIGIT")
+    replace_one_class("FRACTION")
+    replace_one_class("TELEPHONE")
+    replace_one_class("ADDRESS")
+
+
 if __name__ == '__main__':
     # replace_one_class("PLAIN")
     # replace_one_class("PUNCT")
-    # replace_one_class("DATE")
+    replace_one_class("DATE")
     # replace_one_class("VERBATIM")
     # replace_one_class("CARDINAL")
     # replace_one_class("LETTERS")
@@ -58,6 +77,8 @@ if __name__ == '__main__':
     # replace_one_class("TIME")
     # replace_one_class("ELECTRONIC")
     # replace_one_class("DIGIT")
-    replace_one_class("FRACTION")
+    # replace_one_class("FRACTION")
     # replace_one_class("TELEPHONE")
     # replace_one_class("ADDRESS")
+
+    # replace_all_class()

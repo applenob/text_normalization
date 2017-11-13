@@ -6,3 +6,4 @@ input
 model_vars
 play_ground.py
 *.pkl
+tri_*

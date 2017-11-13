@@ -26,9 +26,16 @@ def norm_year(token):
             if int(y2) < 10:
                 ys2 = "o " + ys2
             return num2words(float(y1)).replace("-", " ") + ' ' + ys2
+    elif len(token) == 3:
+        # 360
+        y1s = num2words(float(token[0]))
+        y2s = num2words(float(token[1:])).replace("-", " ")
+        return y1s + " " + y2s
     elif len(token) == 2:
-        # 09
-        return " ".join(map(lambda x: 'o' if x == '0' else num2words(float(x)), list(token)))
+        if int(token) < 10:  # 09
+            return " ".join(map(lambda x: 'o' if x == '0' else num2words(float(x)), list(token)))
+        else:
+            return numstr2word(float(token))
     else:
         return odd
 
@@ -141,6 +148,62 @@ def has_upper(token):
         if c.isupper():
             return True
     return False
+
+
+def all_upper(token):
+    for c in token:
+        if not c.isupper():
+            return False
+    return True
+
+
+def infer_year_month_day(arr, split):
+    """arr是长度为3的list：["12", "20", "2014"]"""
+    if len(arr[0]) == 4:  # 2004-12-20
+        year_n = arr[0]
+        if int(arr[1]) > 12:
+            month_n = arr[2]
+            day_n = arr[1]
+            month_first = False
+        else:
+            month_n = arr[1]
+            day_n = arr[2]
+            # 1988/11/21,the twenty first of november nineteen eighty eight
+            # 2005-04-15, the fifteenth of april two thousand five
+            if split == "-" or split == "/":
+                month_first = False
+            else:
+                month_first = True
+    elif len(arr[2]) == 4:  # 12-20-2004
+        year_n = arr[2]
+        if int(arr[1]) > 12:
+            month_n = arr[0]
+            day_n = arr[1]
+            month_first = True
+        else:
+            month_n = arr[1]
+            day_n = arr[0]
+            month_first = False
+    else:
+        if int(arr[0]) > 31:
+            year_n = arr[0]
+            month_n = arr[1]
+            day_n = arr[2]
+            if split == "-":
+                month_first = False
+            else:
+                month_first = True
+        else:
+            year_n = arr[2]
+            if int(arr[1]) > 12:
+                month_n = arr[0]
+                day_n = arr[1]
+                month_first = True
+            else:
+                month_n = arr[1]
+                day_n = arr[0]
+                month_first = False
+    return year_n, month_n, day_n, month_first
 
 if __name__ == '__main__':
     test_norm_month()

@@ -43,52 +43,110 @@ def replace_puct(token):
 
 def replace_date(token):
     """3.日期：年月日"""
-    token = token.strip().replace("'", "")
-    date_pt_1 = re.compile(r"^\d{4}$")  # 2015
+    week_map = OrderedDict(
+        [("monday,", "monday"),
+         ("monday", "monday"),
+         ("mon", "monday"),
+         ("tuesday,", "tuesday"),
+         ("tuesday", "tuesday"),
+         ("tue", "tuesday"),
+         ("wednesday,", "wednesday"),
+         ("wednesday", "wednesday"),
+         ("wed", "wednesday"),
+         ("thursday,", "thursday"),
+         ("thursday", "thursday"),
+         ("thu", "thursday"),
+         ("friday,", "friday"),
+         ("friday", "friday"),
+         ("fri", "friday"),
+         ("saturday,", "saturday"),
+         ("saturday", "saturday"),
+         ("sat", "saturday"),
+         ("sunday,", "sunday"),
+         ("sunday", "sunday"),
+         ("sun", "sunday"),
+         ])
+    year_map = OrderedDict(
+        [("bce", "b c e"),
+         ("b.c.", "b c"),
+         ("bc.", "b c"),
+         ("bc", "b c"),
+         ("a.d.", "a d"),
+         ("ad.", "a d"),
+         ("ad", "a d"),
+         ])
+    token = token.strip().replace("'", "").lower()
+    if token.endswith(","):
+        token = token[:-1]
+    if token.endswith(", "):
+        token = token[:-2]
+    measure = re.compile(r"|".join(week_map.keys()))
+    matches = measure.findall(token)
+    weeks = ""
+    if len(matches) != 0:
+        for one in matches:
+            token = token.replace(one, "")
+        token = token.strip()
+        weeks = " ".join([week_map[one] for one in matches]) + " "
+        weeks = weeks.replace(",", "")
+    year_pat = r"{}".format("|".join(year_map.keys()))
+    year_pat = year_pat.replace(".", r"\.")
+    measure2 = re.compile(year_pat)
+    match2 = measure2.search(token)
+    years = ""
+    if match2:
+        # print(token)
+        # print(year_pat)
+        # print(match2.group())
+        token = token.replace(match2.group(), "")
+        token = token.strip()
+        years = " " + year_map[match2.group()]
+        years = years.replace(",", "")
+    date_pt_l4 = re.compile(r"^\d{4}$")  # 2015
+    date_pt_l3 = re.compile(r"^\d{3}$")  # 360
+    date_pt_l2 = re.compile(r"^\d{3}$")  # 60
     date_pt_s = re.compile(r"^\d{4}s$")  # 2015s
-    date_pt_s2 = re.compile(r"^\d{2}s$")  # 60s
-    date_pt_2 = re.compile(r"^\d+/\d+/\d+$")  # 11/17/09
-    date_pt_3 = re.compile(r"^\d+-\d+-\d+$")  # 2007-11-24
+    date_pt_s2 = re.compile(r"^\d{3}s$")  # 360s
+    date_pt_s3 = re.compile(r"^\d{2}s$")  # 60s
+    date_pt_slash = re.compile(r"^\d+/\d+/\d+$")  # 11/17/09
+    date_pt_dash = re.compile(r"^\d+-\d+-\d+$")  # 2007-11-24
+    date_pt_dot = re.compile(r"^\d+\.\d+\.\d+$")  # 2007.11.24
     res = token
-    if date_pt_1.match(token):  # 2015
+    if date_pt_l4.match(token) or date_pt_l3.match(token) or date_pt_l2.match(token):  # 2015, 360, 60
         res = norm_year(token)
     elif date_pt_s.match(token):  # 2015s
         res = norm_year(token[:-1])
         arr = res.split()
         arr[-1] = p.plural(arr[-1])
         res = " ".join(arr)
-    elif date_pt_s2.match(token):  # 60s
+    elif date_pt_s2.match(token):  # 360s
+        res = norm_year(token[:-1])
+        arr = res.split()
+        arr[-1] = p.plural(arr[-1])
+        res = " ".join(arr)
+    elif date_pt_s3.match(token):  # 60s
         res = numstr2word(token[:-1])
         res = p.plural(res)
-    elif date_pt_2.match(token):
+    elif date_pt_slash.match(token):
         arr = token.split("/")
-        if len(arr[0]) == 2:  # 11/17/09
-            year_n = arr[2]
-            month_n = arr[0]
-            day_n = arr[1]
-            res = norm_date(month_n, month_first=True, year_n=year_n, day_n=day_n)
-        else:  # 2015/11/11
-            year_n = arr[0]
-            month_n = arr[1]
-            day_n = arr[2]
-            res = norm_date(month_n, month_first=True, year_n=year_n, day_n=day_n)
-    elif date_pt_3.match(token):
+        year_n, month_n, day_n, month_first = infer_year_month_day(arr, "/")
+        res = norm_date(month_n, month_first=month_first, year_n=year_n, day_n=day_n)
+    elif date_pt_dash.match(token):
         arr = token.split("-")
-        if len(arr[0]) == 2:  # 25-08-2015
-            year_n = arr[2]
-            month_n = arr[1]
-            day_n = arr[0]
-            res = norm_date(month_n, month_first=False, year_n=year_n, day_n=day_n)
-        else:  # 2007-11-24
-            year_n = arr[0]
-            month_n = arr[1]
-            day_n = arr[2]
-            res = norm_date(month_n, month_first=False, year_n=year_n, day_n=day_n)
+        year_n, month_n, day_n, month_first = infer_year_month_day(arr, "-")
+        res = norm_date(month_n, month_first=month_first, year_n=year_n, day_n=day_n)
+    elif date_pt_dot.match(token):
+        arr = token.split(".")
+        year_n, month_n, day_n, month_first = infer_year_month_day(arr, ".")
+        res = norm_date(month_n, month_first=month_first, year_n=year_n, day_n=day_n)
     else:
-        token = token.replace(", ", " ")
-        token = token.replace(",", " ")
-        token = token.replace('"', "")
-        token = token.replace("  ", " ")
+        if token.endswith(","):
+            token = token[:-1]
+        token = token.replace(", ", " ").replace(",", " ").replace('"', "").replace("  ", " ")
+        token = re.sub(r'(\d+)th', r'\g<1>', token)
+        token = re.sub(r'(\d+)st', r'\g<1>', token)
+        token = re.sub(r'(\d+)nd', r'\g<1>', token)
+        token = re.sub(r'(\d+)rd', r'\g<1>', token)
         arr = token.split(" ")
         if len(arr) == 3:
             if arr[0].isdigit() and arr[2].isdigit():  # 21 September 2014
@@ -114,13 +172,15 @@ def replace_date(token):
                 month_n = arr[0]
                 day_n = arr[1]
                 res = norm_date(month_n, month_first=True, day_n=day_n)
+    res = weeks + res + years
     return res
 
 
 def test_replace_date():
     test_data = ["2006", "1987", "2000", "2005s", "4 March 2014", "50s", "7 August,2007",
                  "November 4, 2014", "11/17/09", "2007-11-24",
-                 "25-08-2015", "14 April", "April 14", "June 2004"]
+                 "25-08-2015", "14 April", "April 14", "June 2004", "17 November,"
+                 "526 BC."]
     for one in test_data:
         print(one, " ", replace_date(one))
 
@@ -160,6 +220,11 @@ def replace_cardinal(token):
     if token[0] == "-":
         minus = True
         token = token[1:]
+    token = token.replace('-', "")
+    ends = ""
+    if token.endswith("'s"):
+        ends = "'s"
+        token = token[:-2]
     if token.isdigit():
         res = numstr2word(token)
     else:
@@ -168,9 +233,10 @@ def replace_cardinal(token):
             num = roman.fromRoman(token)
             res = numstr2word(num)
         except roman.InvalidRomanNumeralError:
-            res = odd
+            res = token
     if minus:
         res = "minus " + res
+    res = res + ends
     return res
 
 
@@ -231,16 +297,30 @@ def replace_measure(token):
     # 默认是复数
     measure_map = OrderedDict(
                   [("MHz", "megahertz"),
+                   ("kHz", "kilohertz"),
+                   ("KHz", "kilohertz"),
+                   ("GHz", "gigahertz"),
+                   ("Hz", "hertz"),
+                   ("atm", "atmospheres"),
+                   ("cwt", "hundredweight"),
+                   ("in", "inches"),
+                   ("MPa", "megapascals"),
+                   ("kcal", "kilo calories"),
+                   ("mol", "mole"),
                    ('percent', 'percent'),
+                   ('pc', 'percent'),
+                   ('yr', 'years'),
                    ("m²", "square meters"),
                    ("m2", "square meters"),
                    ("m³", "cubic meters"),
                    ("m3", "cubic meters"),
                    ("mi²", "square miles"),
                    ("mi", "miles"),
+                   ("μm", "micrometers"),
                    ("km²", "square kilometers"),
                    ("km2", "square kilometers"),
                    ("km", "kilometers"),
+                   ("Km", "kilometers"),
                    ("mm", "millimeters"),
                    ("cm", "centimeters"),
                    ("nm", "nanometers"),
@@ -248,14 +328,15 @@ def replace_measure(token):
                    ("kph", "kilometers per hour"),
                    ("kg", "kilograms"),
                    ("sq", "square"),
-                   ("lb", "pounds"),
                    ("lbs", "pounds"),
+                   ("lb", "pounds"),
                    ("cc", "c c"),
                    ("PB", "petabytes"),
                    ("TB", "terabytes"),
                    ("GB", "gigabytes"),
                    ("MB", "megabytes"),
                    ("KB", "kilobytes"),
+                   ("kB", "kilobytes"),
                    ("KC", "kilo coulombs"),
                    ("mL", "milliliters"),
                    ("ml", "milliliters"),
@@ -268,22 +349,28 @@ def replace_measure(token):
                    ("hp", "horsepower"),
                    ("kW", "kilowatts"),
                    ("MW", "megawatts"),
+                   ("Gs", "giga seconds"),
+
                    ("B", "bytes"),
                    ("day", "day"),
                    ("yd", "yards"),
                    ("/", "per"),
-                   (r'\"\"', "inches"),
                    ("%", "percent"),
                    ("s", "second"),
                    ("h", "hour"),
                    ("m", "meters"),
+                   ("g", "grams"),
                    ])
+    replace_dict = OrderedDict([('""', "inches"), ("'", "feet")])
     # print(measure_map.keys())
     res = token.strip()
     measure = re.compile(r"{}".format("|".join(measure_map.keys())))
-    matches = measure.findall(token)
+    matches = measure.findall(res)
+    for k in replace_dict:
+        if k in res:
+            matches.append(k)
     if len(matches) != 0:
-        reps = [measure_map[one] for one in matches]
+        reps = [measure_map[one] if one in measure_map else replace_dict[one] for one in matches]
         for one in matches:
             res = res.replace(one, "")
         res = res.strip()
@@ -296,7 +383,7 @@ def replace_measure(token):
 
 
 def test_replace_measure():
-    test_case = ["17.5/km²", "9%", "147 m"]
+    test_case = ["17.5/km²", "9%", "147 m", '12""']
     for one in test_case:
         print(replace_measure(one))
 
@@ -542,7 +629,7 @@ def replace_fraction(token):
 
 def replace_telephone(token):
     """15.电话号码"""
-    res = token.strip().lower().replace("(", "")
+    res = token.strip().lower().replace("(", "").replace(" - ", "-")
     arr = []
     for c in res:
         if c.isdigit():
@@ -555,6 +642,16 @@ def replace_telephone(token):
         else:
             arr.append("sil")
     res = " ".join(arr)
+    res = re.sub(r'(sil )+', r'sil ', res)
+    # pt = re.compile(r' (o )+')
+    # match = pt.search(res)
+    # if match:
+    #     target = match.group()
+    #     if type(target) == str:
+    #         if len(target) == 7:
+    #             res = res.replace(" o o o ", " thousand ")
+    #         elif len(target) == 5:
+    #             res = res.replace(" o o ", " hundred ")
     return res
 
 
