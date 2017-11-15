@@ -24,7 +24,7 @@ labels = ['PLAIN', 'PUNCT', 'DATE', 'LETTERS', 'CARDINAL', 'VERBATIM',
 
 def replace():
     out_name = os.path.join(OUTPUT_PATH, out_file_name)
-    print("read class predictions from : ", class_pred_name)
+    print("read class predictions from: ", class_pred_name)
     class_pred_df = pd.read_csv(os.path.join(OUTPUT_PATH, class_pred_name))
     result = class_pred_df[["id"]]
 

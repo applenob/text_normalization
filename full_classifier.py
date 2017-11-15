@@ -17,11 +17,13 @@ boundary_letter = -1
 space_letter = 0
 round_num = 150
 train_file_name = "input/en_train.csv"
-test_file_name = "input/en_test.csv"
+test_file_name = "input/en_test_2.csv"
 model_file_name = "model_vars/train16.v2.model"
 model_dump_name = "model_vars/dump.train16.v2.txt"
 class_pred_file_name = "output/class_pred_16.v2.csv"
+all_pred_file_name = "output/train_pred.v2.csv"
 valid_compare_file_name = "output/valid_compare_16.v2.csv"
+train_compare_file_name = "output/train_compare_16.v2.csv"
 
 # max_data_size = 320000
 param = {'objective': 'multi:softmax',
@@ -210,6 +212,7 @@ def compare_valid_data_pred():
     gc.collect()
     # 每个目标词用组成这个词的所有字符的ascii码表示，并padding
     before = train_df["before"].values
+    after = train_df["after"].values
     for x in before:
         x_row = np.ones(max_num_features, dtype=int) * space_letter
         for xi, i in zip(list(str(x)), np.arange(max_num_features)):
@@ -231,13 +234,15 @@ def compare_valid_data_pred():
     del y_data
     gc.collect()
 
-    x_train, x_valid, y_train, y_valid, before_train, before_valid = train_test_split(x_data_context_a, y_data_a, before,
-                                                          test_size=0.05, random_state=2017)
+    x_train, x_valid, y_train, y_valid, before_train, before_valid, after_train, after_valid = \
+        train_test_split(x_data_context_a, y_data_a, before, after, test_size=0.01, random_state=2017)
+    print("y_valid: ", y_valid[:20])
     del x_data_context_a
     del y_data_a
     del x_train
     del y_train
     del before_train
+    del after_train
     gc.collect()
 
     print("forming dmatrix...")
@@ -247,16 +252,90 @@ def compare_valid_data_pred():
     bst.load_model(model_file_name)
     print("start predicting ...")
     ypred = bst.predict(dvalid)
-    print("ypred:", type(ypred), np.shape(ypred))
-    valid_df = pd.DataFrame({"before": before_valid})
+    print("prediction size:", np.shape(ypred)[0])
+    valid_df = pd.DataFrame({"before": before_valid, "after": after_valid})
     valid_df["true"] = list(map(lambda y: index2class[y], y_valid))
     valid_df["class_pred"] = list(map(lambda y: index2class[y], ypred))
     diff_df = valid_df.loc[valid_df["true"] != valid_df["class_pred"]]
+    print("different size:", diff_df.shape[0])
     diff_df.to_csv(valid_compare_file_name, index=False)
 
 
+def compare_data_pred(is_valid=True, all_pred=False):
+    print("open data files ...")
+    train_df = pd.read_csv(train_file_name)
+
+    print("data processing...")
+    x_data = []
+
+    class2index = dict(zip(labels, range(len(labels))))
+    index2class = dict(zip(range(len(labels)), labels))
+    y_data = map(lambda c: class2index[c], train_df['class'].values)
+    gc.collect()
+    # 每个目标词用组成这个词的所有字符的ascii码表示，并padding
+    before = train_df["before"].values
+    after = train_df["after"].values
+    for x in before:
+        x_row = np.ones(max_num_features, dtype=int) * space_letter
+        for xi, i in zip(list(str(x)), np.arange(max_num_features)):
+            x_row[i] = ord(xi)
+        x_data.append(x_row)
+
+    fea_x = get_feas(train_df)
+
+    del train_df
+    gc.collect()
+
+    x_data_context = np.array(context_window_transform(x_data, pad_size))
+    del x_data
+    gc.collect()
+    # x_data_context_a = np.array(x_data_context)
+    x_data_context_a = np.hstack([x_data_context, fea_x])
+    y_data_a = np.array(y_data)
+    del x_data_context
+    del y_data
+    gc.collect()
+
+    if is_valid:
+        x_train, x_valid, y_train, y_valid, before_train, before_valid, after_train, after_valid = \
+            train_test_split(x_data_context_a, y_data_a, before, after, test_size=0.01, random_state=2017)
+        print("y_valid: ", y_valid[:20])
+        del x_data_context_a
+        del y_data_a
+        del x_train
+        del y_train
+        del before_train
+        del after_train
+        gc.collect()
+
+        print("forming dmatrix...")
+        dx = xgb.DMatrix(x_valid, label=y_valid)
+        valid_df = pd.DataFrame({"before": before_valid, "after": after_valid})
+        valid_df["true"] = list(map(lambda y: index2class[y], y_valid))
+    else:
+        print("forming dmatrix...")
+        dx = xgb.DMatrix(x_data_context_a, label=y_data_a)
+        valid_df = pd.DataFrame({"before": before, "after": after})
+        valid_df["true"] = list(map(lambda y: index2class[y], y_data_a))
+
+    print("loading model ...")
+    bst = xgb.Booster(param)  # init model
+    bst.load_model(model_file_name)
+    print("start predicting ...")
+    ypred = bst.predict(dx)
+    print("prediction size:", np.shape(ypred)[0])
+    valid_df["class_pred"] = list(map(lambda y: index2class[y], ypred))
+    diff_df = valid_df.loc[valid_df["true"] != valid_df["class_pred"]]
+    print("different size:", diff_df.shape[0])
+    if all_pred:
+        valid_df.to_csv(all_pred_file_name, index=False)
+    if is_valid:
+        diff_df.to_csv(valid_compare_file_name, index=False)
+    else:
+        diff_df.to_csv(train_compare_file_name, index=False)
+
 if __name__ == '__main__':
-    train()
+    # train()
     # train(with_valid=False)
-    # test()
-    # compare_valid_data_pred()
+    test()
+    # compare_data_pred(is_valid=False, all_pred=True)

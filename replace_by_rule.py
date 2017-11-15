@@ -217,6 +217,8 @@ def replace_cardinal(token):
     token = token.replace('.', "")
     token = token.replace(':', "")
     minus = False
+    if len(token) == 0:
+        return ""
     if token[0] == "-":
         minus = True
         token = token[1:]
@@ -257,6 +259,8 @@ def replace_decimal(token):
         return "point o"
     res = res.replace(",", "")
     minus = False
+    if len(res) == 0:
+        return ""
     if res[0] == "-":
         res = res[1:]
         minus = True
@@ -296,7 +300,47 @@ def replace_measure(token):
     """8.衡量单位"""
     # 默认是复数
     measure_map = OrderedDict(
-                  [("MHz", "megahertz"),
+                  [("years", "years"),
+                   ("year", "year"),
+                   ("months", "months"),
+                   ("month", "month"),
+                   ("weeks", "weeks"),
+                   ("week", "week"),
+                   ("days", "days"),
+                   ("day", "day"),
+                   ("hours", "hours"),
+                   ("minutes", "minutes"),
+                   ("min", "min"),
+                   ("seconds", "seconds"),
+                   ("nautical", "nautical"),
+                   ("acres", "acres"),
+                   ("hectares", "hectares"),
+                   ("tonnes", "tonnes"),
+                   ("tons", "tons"),
+                   ("kilobytes", "kilobytes"),
+                   ("nanobarns", "nanobarns"),
+                   ("square", "square"),
+                   ("miles", "miles"),
+                   ("kilometres", "kilometres"),
+                   ("kilometre", "kilometre"),
+                   ("kilometers", "kilometers"),
+                   ("kilometer", "kilometer"),
+                   ("meters", "meters"),
+                   ("meter", "meter"),
+                   ("metres", "metres"),
+                   ("metre", "metre"),
+                   ("feet", "feet"),
+                   ("yards", "yards"),
+                   ("barrels", "barrels"),
+                   ("calories", "calories"),
+                   ("watts", "watts"),
+                   ("knots", "knots"),
+                   ("inches", "inches"),
+                   ("pounds", "pounds"),
+                   ("degrees", "degrees"),
+                   ("bar", "bar"),
+                   ("Cellos", "Cellos"),
+                   ("MHz", "megahertz"),
                    ("kHz", "kilohertz"),
                    ("KHz", "kilohertz"),
                    ("GHz", "gigahertz"),
@@ -305,7 +349,9 @@ def replace_measure(token):
                    ("cwt", "hundredweight"),
                    ("in", "inches"),
                    ("MPa", "megapascals"),
+                   ("kPa", "kilopascals"),
                    ("kcal", "kilo calories"),
+                   ("kJ", "kilo joules"),
                    ("mol", "mole"),
                    ('percent', 'percent'),
                    ('pc', 'percent'),
@@ -321,25 +367,34 @@ def replace_measure(token):
                    ("km2", "square kilometers"),
                    ("km", "kilometers"),
                    ("Km", "kilometers"),
+                   ("mm²", "square millimeters"),
                    ("mm", "millimeters"),
                    ("cm", "centimeters"),
                    ("nm", "nanometers"),
                    ("rpm", "revolutions per minute"),
                    ("kph", "kilometers per hour"),
+                   ("Kg", "kilograms"),
                    ("kg", "kilograms"),
+                   ("μg", "micrograms"),
                    ("sq", "square"),
                    ("lbs", "pounds"),
                    ("lb", "pounds"),
                    ("cc", "c c"),
+                   ("oz", "ounces"),
+                   ("Gbps", "gigabit per second"),
                    ("PB", "petabytes"),
                    ("TB", "terabytes"),
                    ("GB", "gigabytes"),
                    ("MB", "megabytes"),
+                   ("KiB", "kilobytes"),
                    ("KB", "kilobytes"),
                    ("kB", "kilobytes"),
                    ("KC", "kilo coulombs"),
                    ("mL", "milliliters"),
                    ("ml", "milliliters"),
+                   ("PL", "peta liters"),
+                   ("mAh", "milli amp hours"),
+                   ("MA", "milli amperes"),
                    ("mA", "milli amperes"),
                    ("ma", "milli amperes"),
                    ("ha", "hectares"),
@@ -350,8 +405,11 @@ def replace_measure(token):
                    ("kW", "kilowatts"),
                    ("MW", "megawatts"),
                    ("Gs", "giga seconds"),
-
+                   ("ers", "ers"),
+                   ("A", "amperes"),
                    ("B", "bytes"),
+                   ("eV", "electron volts"),
+                   ("V", "volts"),
                    ("day", "day"),
                    ("yd", "yards"),
                    ("/", "per"),
@@ -383,7 +441,7 @@ def replace_measure(token):
 
 
 def test_replace_measure():
-    test_case = ["17.5/km²", "9%", "147 m", '12""']
+    test_case = ["17.5/km²", "9%", "147 m", '12""', '12"', "2140 hours"]
     for one in test_case:
         print(replace_measure(one))
 
@@ -719,9 +777,9 @@ def replace_address(token):
     return res
 
 if __name__ == '__main__':
-    test_replace_date()
+    # test_replace_date()
     # test_replace_decimal()
-    # test_replace_measure()
+    test_replace_measure()
     # test_replace_money()
     # test_replace_ordinal()
     # test_replace_time()
