@@ -3,6 +3,7 @@
 # this script must run with python3
 from __future__ import print_function
 from num2words import num2words
+import re
 
 odd = "odd!~!"
 
@@ -13,29 +14,33 @@ def norm_year(token):
         # 2015
         if token[2] == '0' and token[3] == '0' and token[1] != '0':
             y1 = token[:2]
-            return num2words(float(y1)) + ' hundred'
+            return numstr2word(y1) + ' hundred'
         elif token[1] == '0' and token[2] == '0':
             y1 = token[0]
             y2 = token[3:]
             ys2 = " " + num2words(float(y2)) if y2 != "0" else ""
-            return num2words(float(y1)) + ' thousand' + ys2
+            return numstr2word(y1) + ' thousand' + ys2
         else:
             y1 = token[: 2]
             y2 = token[2:]
-            ys2 = num2words(float(y2)).replace("-", " ")
+            ys2 = numstr2word(y2).replace("-", " ")
             if int(y2) < 10:
                 ys2 = "o " + ys2
-            return num2words(float(y1)).replace("-", " ") + ' ' + ys2
+            return numstr2word(y1).replace("-", " ") + ' ' + ys2
     elif len(token) == 3:
-        # 360
-        y1s = num2words(float(token[0]))
-        y2s = num2words(float(token[1:])).replace("-", " ")
-        return y1s + " " + y2s
+        if token[1] == '0':  # 202 or 200
+            return numstr2word(token)
+        else:  # 360
+            y1s = numstr2word(token[0])
+            y2s = numstr2word(token[1:])
+            return y1s + " " + y2s
     elif len(token) == 2:
         if int(token) < 10:  # 09
-            return " ".join(map(lambda x: 'o' if x == '0' else num2words(float(x)), list(token)))
+            return "o " + numstr2word(token[1])
         else:
-            return numstr2word(float(token))
+            return numstr2word(token)
+    elif len(token) == 1:
+        return "o " + numstr2word(token)
     else:
         return odd
 
@@ -66,7 +71,7 @@ def test_norm_month():
 
 
 def norm_day(token):
-    return num2words(float(token), ordinal=True).replace("-", " ")
+    return numstr2word(token, ordinal=True)
 
 
 def norm_date(month_n, month_first=True, year_n="", day_n=""):
@@ -101,19 +106,19 @@ def int2order_string(num):
     return ordinals[int(num) - 1]
 
 
-def norm_time(time, sufix):
-    time = time.strip()
+def norm_time(time_, sufix):
+    time_ = time_.strip()
     sep = ""
-    if ":" in time:
+    if ":" in time_:
         sep = ":"
-    elif "." in time:
+    elif "." in time_:
         sep = "."
     if sep == "":
-        if time.isdigit():
-            return numstr2word(time)
+        if time_.isdigit():
+            return numstr2word(time_)
         else:
-            return time
-    arr = time.split(sep)
+            return time_
+    arr = time_.split(sep)
     arr = [one.strip() for one in arr]
     if len(arr) == 2 and arr[0].isdigit() and arr[1].isdigit():
         min_s = " " + numstr2word(arr[1])
@@ -125,12 +130,28 @@ def norm_time(time, sufix):
         elif int(arr[1]) < 10:
             min_s = ' o' + min_s
         return numstr2word(arr[0]) + min_s
-    if len(arr) == 3 and arr[0].isdigit() and arr[1].isdigit() and arr[2].isdigit():
-        return numstr2word(arr[0]) + " hours " + \
-               numstr2word(arr[1]) + " minutes and " + \
-               numstr2word(arr[2]) + " seconds"
+    elif len(arr) == 2 and arr[0].isdigit() and "." in arr[1]:
+        arr_2 = arr[1].split(".")
+        if len(arr_2) == 2 and arr_2[0].isdigit() and arr_2[1].isdigit():
+            if int(arr[0]) == 1:
+                return numstr2word(arr[0]) + " minute " + \
+                       numstr2word(arr_2[0]) + " seconds and " + \
+                       numstr2word(arr_2[1]) + " milliseconds"
+            else:
+                return numstr2word(arr[0]) + " minutes " + \
+                       numstr2word(arr_2[0]) + " seconds and " + \
+                       numstr2word(arr_2[1]) + " milliseconds"
+    elif len(arr) == 3 and arr[0].isdigit() and arr[1].isdigit() and arr[2].isdigit():
+        if int(arr[0]) == 1:
+            return numstr2word(arr[0]) + " hour " + \
+                   numstr2word(arr[1]) + " minutes and " + \
+                   numstr2word(arr[2]) + " seconds"
+        else:
+            return numstr2word(arr[0]) + " hours " + \
+                   numstr2word(arr[1]) + " minutes and " + \
+                   numstr2word(arr[2]) + " seconds"
     else:
-        return time
+        return time_
 
 
 def numstr2word(num, ordinal=False):

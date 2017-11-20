@@ -15,22 +15,21 @@ max_num_features = 10
 pad_size = 1
 boundary_letter = -1
 space_letter = 0
-round_num = 150
+round_num = 50
 train_file_name = "input/en_train.csv"
 test_file_name = "input/en_test_2.csv"
-model_file_name = "model_vars/train16.v2.model"
-model_dump_name = "model_vars/dump.train16.v2.txt"
-class_pred_file_name = "output/class_pred_16.v2.csv"
-all_pred_file_name = "output/train_pred.v2.csv"
-valid_compare_file_name = "output/valid_compare_16.v2.csv"
-train_compare_file_name = "output/train_compare_16.v2.csv"
+model_file_name = "model_vars/train16.v2.6.model"
+model_dump_name = "model_vars/dump.train16.v2.6.txt"
+class_pred_file_name = "output/class_pred_16.v2.6.csv"
+all_pred_file_name = "output/train_pred.v2.6.csv"
+valid_compare_file_name = "output/valid_compare_16.v2.6.csv"
+train_compare_file_name = "output/train_compare_16.v2.6.csv"
 
 # max_data_size = 320000
-param = {'objective': 'multi:softmax',
+param = {'objective': 'multi:softprob',
          'eta': '0.2',
          'max_depth': 11,
-         'silent': 1,
-         'nthread': -1,
+         'silent': True,
          'num_class': 16,
          'eval_metric': 'merror'}
 labels = ['PLAIN', 'PUNCT', 'DATE', 'LETTERS', 'CARDINAL', 'VERBATIM',
@@ -56,18 +55,21 @@ weight_dict = {'PLAIN': 0.01,
 
 def context_window_transform(data, pad_size):
     """每个词加上前面一个和后面一个词，中间用-1隔开"""
-    pre = np.zeros(max_num_features)
+    pre = np.zeros(max_num_features, dtype=int)
     pre = [pre for x in np.arange(pad_size)]
     data = pre + data + pre
-    neo_data = []
+    # print(data)
+    new_data = []
     for i in np.arange(len(data) - pad_size * 2):
+        if np.all(data[i + pad_size] == 0):
+            continue
         row = []
-        for x in data[i : i + pad_size * 2 + 1]:
+        for x in data[i: i + pad_size * 2 + 1]:
             row += [boundary_letter]
             row += x.tolist()
         row += [boundary_letter]
-        neo_data.append(row)
-    return neo_data
+        new_data.append(row)
+    return new_data
 
 
 def get_feas(data_df):
@@ -95,8 +97,12 @@ def train(with_valid=True, save=True):
     y_data = map(lambda c: class2index[c], train_df['class'].values)
     gc.collect()
     # 每个目标词用组成这个词的所有字符的ascii码表示，并padding
-    for x in train_df['before'].values:
+    for x, token_id in zip(train_df['before'].values, train_df["token_id"].values):
+        if token_id == 0:
+            x_row_before = np.zeros(max_num_features, dtype=int)
+            x_data.append(x_row_before)
         x_row = np.ones(max_num_features, dtype=int) * space_letter
+
         for xi, i in zip(list(str(x)), np.arange(max_num_features)):
             x_row[i] = ord(xi)
         x_data.append(x_row)
@@ -150,7 +156,10 @@ def train(with_valid=True, save=True):
 
         print("training start...")
         print("params: ", param)
-        model = xgb.train(param, dtrain, round_num, watchlist, early_stopping_rounds=20,
+        print("loading model ...")
+        model = xgb.train(param, dtrain, round_num, watchlist,
+                          xgb_model="model_vars/train16.v2.5.model",
+                          early_stopping_rounds=10,
                           verbose_eval=10)
     else:
         dtrain = xgb.DMatrix(x_data_context_a, label=y_data_a)
@@ -170,8 +179,12 @@ def test():
     # 每个目标词用组成这个词的所有字符的ascii码表示，并padding
     print("loading test data ...")
     x_data = []
-    for x in test_df['before'].values:
+    for x, token_id in zip(test_df['before'].values, test_df["token_id"].values):
+        if token_id == 0:
+            x_row_before = np.zeros(max_num_features, dtype=int)
+            x_data.append(x_row_before)
         x_row = np.ones(max_num_features, dtype=int) * space_letter
+
         for xi, i in zip(list(str(x)), np.arange(max_num_features)):
             x_row[i] = ord(xi)
         x_data.append(x_row)
@@ -185,10 +198,15 @@ def test():
     bst = xgb.Booster(param)  # init model
     bst.load_model(model_file_name)
     print("start predicting ...")
-    ypred = bst.predict(dtest)
-    print("ypred:", type(ypred), np.shape(ypred))
-    print(test_df.shape)
-    print(test_df["sentence_id"].values.shape, test_df["sentence_id"].values.dtype)
+    # ypred = bst.predict(dtest)
+
+    yprob = bst.predict(dtest)
+    ypred = np.argmax(yprob, axis=1)
+    ymax_prob = np.max(yprob, axis=1)
+    print("ypred:", np.shape(ypred))
+    print("ymax_prob:", np.shape(ymax_prob))
+    # print(test_df.shape)
+    # print(test_df["sentence_id"].values.shape, test_df["sentence_id"].values.dtype)
     ids_a = np.array(map(lambda tup: str(tup[0]) + "_" + str(tup[1]),
                          zip(test_df["sentence_id"].values,
                              test_df["token_id"].values)))
@@ -196,6 +214,7 @@ def test():
     test_df["id"] = ids_a
     class_df = test_df[["id", "before"]]
     class_df["class_pred"] = ypred
+    class_df["max_prob"] = ymax_prob
     class_df.to_csv(class_pred_file_name, index=False)
 
 
@@ -336,6 +355,6 @@ def compare_data_pred(is_valid=True, all_pred=False):
 
 if __name__ == '__main__':
     # train()
-    # train(with_valid=False)
-    test()
     # compare_data_pred(is_valid=False, all_pred=True)
+    test()
+

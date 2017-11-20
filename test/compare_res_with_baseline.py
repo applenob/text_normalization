@@ -6,10 +6,10 @@ import numpy as np
 import sys
 sys.path.append("..")
 
-pred_file = "../output/class_pred_16.v2.csv"
+pred_file = "../output/class_pred_16_fixed.v2.6.csv"
 test_file = "../input/en_test_2.csv"
 baseline_file = "../output/baseline.csv"
-res_file = "../output/res_16.v2.csv"
+res_file = "../output/res_16.v2.6.final.csv"
 out_file = "compare.csv"
 labels = ['PLAIN', 'PUNCT', 'DATE', 'LETTERS', 'CARDINAL', 'VERBATIM',
           'DECIMAL', 'MEASURE', 'MONEY', 'ORDINAL', 'TIME', 'ELECTRONIC',

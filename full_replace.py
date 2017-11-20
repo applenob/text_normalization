@@ -2,7 +2,6 @@
 # @author: cer
 # this script must run with python3
 from __future__ import print_function
-from __future__ import absolute_import
 from num2words import num2words
 import os
 import time
@@ -15,15 +14,15 @@ INPUT_PATH = "input"
 OUTPUT_PATH = "output"
 # self_classes = ["PLAIN", "PUNCT"]
 dict_pkl_name = "dict.pkl"
-class_pred_name = "class_pred_16_fixed.v2.csv"
-out_file_name = "res_16.v2.csv"
+class_pred_name = "class_pred_16_fixed.v2.5.csv"
+out_file_name = "res_16.v2.5.csv"
+out_debug_name = "res_16.v2.5.debug.csv"
 labels = ['PLAIN', 'PUNCT', 'DATE', 'LETTERS', 'CARDINAL', 'VERBATIM',
           'DECIMAL', 'MEASURE', 'MONEY', 'ORDINAL', 'TIME', 'ELECTRONIC',
           'DIGIT', 'FRACTION', 'TELEPHONE', 'ADDRESS']
 
 
 def replace():
-    out_name = os.path.join(OUTPUT_PATH, out_file_name)
     print("read class predictions from: ", class_pred_name)
     class_pred_df = pd.read_csv(os.path.join(OUTPUT_PATH, class_pred_name))
     result = class_pred_df[["id"]]
@@ -88,9 +87,18 @@ def replace():
     print("time cost: {}".format(time.time() - s))
     print("after:", len(after_s))
     print("test file size: {}".format(result.shape[0]))
-    result["after"] = after_s
+    result.loc[:, "after"] = after_s
+
+    out_name = os.path.join(OUTPUT_PATH, out_file_name)
     print("save normalization to file : ", out_name)
     result.to_csv(out_name, index=False)
+
+    result.loc[:, "before"] = class_pred_df.loc[:, "before"]
+    result.loc[:, "class_pred"] = class_pred_df.loc[:, "class_pred"].apply(lambda c: labels[int(c)])
+    result.loc[:, "max_prob"] = class_pred_df.loc[:, "max_prob"]
+    debug_name = os.path.join(OUTPUT_PATH, out_debug_name)
+    print("save debug to file : ", debug_name)
+    result.to_csv(debug_name)
 
 
 if __name__ == '__main__':

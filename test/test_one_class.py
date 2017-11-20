@@ -66,7 +66,7 @@ def replace_all_class():
 if __name__ == '__main__':
     # replace_one_class("PLAIN")
     # replace_one_class("PUNCT")
-    replace_one_class("DATE")
+    # replace_one_class("DATE")
     # replace_one_class("VERBATIM")
     # replace_one_class("CARDINAL")
     # replace_one_class("LETTERS")
@@ -75,10 +75,9 @@ if __name__ == '__main__':
     # replace_one_class("MONEY")
     # replace_one_class("ORDINAL")
     # replace_one_class("TIME")
-    # replace_one_class("ELECTRONIC")
+    replace_one_class("ELECTRONIC")
     # replace_one_class("DIGIT")
     # replace_one_class("FRACTION")
     # replace_one_class("TELEPHONE")
     # replace_one_class("ADDRESS")
-
     # replace_all_class()
